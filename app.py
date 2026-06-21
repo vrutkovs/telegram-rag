@@ -168,9 +168,9 @@ def main() -> None:
             help="0.0 = safer and more predictable, 1.0 = most creative",
         )
 
-    generated = st.session_state.get("generated", "")
-    examples: list[Post] = st.session_state.get("examples", [])
-    prompt = st.session_state.get("prompt", "")
+    generated = st.session_state.get("generated_post", "")
+    examples: list[Post] = st.session_state.get("selected_examples", [])
+    prompt = st.session_state.get("generated_prompt", "")
     if st.button("Generate", type="primary", disabled=not topic.strip() or not posts):
         with st.status("Generating post...", expanded=True) as status:
             try:
@@ -189,9 +189,9 @@ def main() -> None:
                 prompt = build_prompt_from_posts(topic, examples)
                 status.write("Sending prompt to Gemini")
                 generated = generate_post(prompt, temperature)
-                st.session_state["generated"] = generated
-                st.session_state["examples"] = examples
-                st.session_state["prompt"] = prompt
+                st.session_state["generated_post"] = generated
+                st.session_state["selected_examples"] = examples
+                st.session_state["generated_prompt"] = prompt
                 status.write("Displaying post contents")
                 status.write("Showing prompt")
                 status.update(label="Post generated", state="complete")
@@ -225,7 +225,7 @@ def main() -> None:
                 height=320,
                 disabled=True,
                 label_visibility="collapsed",
-                key="prompt",
+                key="prompt-display",
             )
 
 
