@@ -28,7 +28,7 @@ def should_write_message(message: object) -> bool:
 def write_post(
     output_dir: Path, account_id: int, channel_name: str, post_id: int, text: str
 ) -> Path:
-    channel_dir = output_dir / str(account_id) / safe_path_name(channel_name)
+    channel_dir = output_dir / safe_path_name(channel_name)
     channel_dir.mkdir(parents=True, exist_ok=True)
 
     post_path = channel_dir / f"{post_id}.txt"
@@ -57,13 +57,12 @@ async def retrieve_channel(channel: str, output_dir: Path) -> int:
     async with TelegramClient(session, api_id, api_hash) as client:
         account = await client.get_me()
         entity = await client.get_entity(channel)
-        channel_name = getattr(entity, "title", None) or getattr(entity, "username", None) or channel
 
         async for message in client.iter_messages(entity):
             if not should_write_message(message):
                 continue
 
-            write_post(output_dir, account.id, channel_name, message.id, message.raw_text)
+            write_post(output_dir, account.id, channel, message.id, message.raw_text)
             count += 1
 
     return count
