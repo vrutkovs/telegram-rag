@@ -133,6 +133,7 @@ def generate_post(prompt: str, temperature: float) -> str:
 def main() -> None:
     st.set_page_config(page_title="Telegram post generator")
     st.title("Telegram post generator")
+    st.markdown("[Source code](https://github.com/vrutkovs/telegram-rag)")
 
     posts_folder = os.environ.get("POSTS_FOLDER")
     if not posts_folder:
