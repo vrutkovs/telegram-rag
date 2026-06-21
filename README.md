@@ -35,3 +35,7 @@ uv run streamlit run app.py
 ```
 
 The app retrieves relevant existing posts from `POSTS_FOLDER`, sends them as style examples to Gemini, and displays a new original post for the entered topic.
+
+## License
+
+Apache-2.0. See [LICENSE](LICENSE).
