@@ -35,6 +35,11 @@ STOP_WORDS = {
     "you",
     "your",
 }
+MIN_POST_WORDS = 20
+
+
+def word_count(text: str) -> int:
+    return len(re.findall(r"[\w]+", text))
 
 
 @st.cache_data(show_spinner="Loading posts...")
@@ -47,7 +52,7 @@ def load_posts(folder: Path) -> list[Post]:
     posts = []
     for path in sorted(folder.glob("*.txt")):
         text = path.read_text(encoding="utf-8").strip()
-        if text:
+        if word_count(text) >= MIN_POST_WORDS:
             posts.append(Post(path=path, text=text))
     return posts
 
