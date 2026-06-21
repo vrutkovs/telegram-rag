@@ -12,8 +12,10 @@ def safe_path_name(name: str) -> str:
     return cleaned or "channel"
 
 
-def write_post(output_dir: Path, channel_name: str, post_id: int, text: str) -> Path:
-    channel_dir = output_dir / safe_path_name(channel_name)
+def write_post(
+    output_dir: Path, account_id: int, channel_name: str, post_id: int, text: str
+) -> Path:
+    channel_dir = output_dir / str(account_id) / safe_path_name(channel_name)
     channel_dir.mkdir(parents=True, exist_ok=True)
 
     post_path = channel_dir / f"{post_id}.txt"
@@ -40,6 +42,7 @@ async def retrieve_channel(channel: str, output_dir: Path) -> int:
 
     count = 0
     async with TelegramClient(session, api_id, api_hash) as client:
+        account = await client.get_me()
         entity = await client.get_entity(channel)
         channel_name = getattr(entity, "title", None) or getattr(entity, "username", None) or channel
 
@@ -48,7 +51,7 @@ async def retrieve_channel(channel: str, output_dir: Path) -> int:
             if not text:
                 continue
 
-            write_post(output_dir, channel_name, message.id, text)
+            write_post(output_dir, account.id, channel_name, message.id, text)
             count += 1
 
     return count
@@ -56,7 +59,7 @@ async def retrieve_channel(channel: str, output_dir: Path) -> int:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Retrieve Telegram channel text posts into output/<channel>/<post id>.txt"
+        description="Retrieve Telegram channel text posts into output/<account id>/<channel>/<post id>.txt"
     )
     parser.add_argument("channel", help="Telegram channel username, URL, or identifier")
     parser.add_argument(

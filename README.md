@@ -1,6 +1,6 @@
 # telegram-rag
 
-Retrieve text posts from a Telegram channel into `output/<channel name>/<post id>.txt`.
+Retrieve text posts from a Telegram channel into `output/<account id>/<channel name>/<post id>.txt`.
 
 ## Setup
 

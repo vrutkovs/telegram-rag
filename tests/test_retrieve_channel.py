@@ -9,10 +9,10 @@ def test_safe_path_name_replaces_unsafe_characters() -> None:
     assert safe_path_name("News/Updates: Today") == "News_Updates_ Today"
 
 
-def test_write_post_creates_channel_directory_and_post_file(tmp_path: Path) -> None:
-    post_path = write_post(tmp_path, "News/Updates", 42, "hello\nworld")
+def test_write_post_creates_account_and_channel_directories(tmp_path: Path) -> None:
+    post_path = write_post(tmp_path, 12345, "News/Updates", 42, "hello\nworld")
 
-    assert post_path == tmp_path / "News_Updates" / "42.txt"
+    assert post_path == tmp_path / "12345" / "News_Updates" / "42.txt"
     assert post_path.read_text(encoding="utf-8") == "hello\nworld"
 
 
