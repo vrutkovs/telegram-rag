@@ -146,14 +146,19 @@ def main() -> None:
 
     st.caption(f"Loaded {len(posts)} posts from {posts_folder}")
     topic = st.text_input("Topic", placeholder="What should the new post be about?")
-    post_count = st.number_input(
-        "Posts to fetch",
-        min_value=1,
-        max_value=max(1, len(posts)),
-        value=min(8, max(1, len(posts))),
-        step=1,
-    )
-    temperature = st.slider("Temperature", min_value=0.0, max_value=1.0, value=0.7, step=0.1)
+    post_count_column, temperature_column = st.columns(2)
+    with post_count_column:
+        post_count = st.number_input(
+            "Posts to fetch",
+            min_value=1,
+            max_value=max(1, len(posts)),
+            value=min(10, max(1, len(posts))),
+            step=1,
+        )
+    with temperature_column:
+        temperature = st.slider(
+            "Temperature", min_value=0.0, max_value=1.0, value=0.7, step=0.1
+        )
 
     generated = ""
     examples: list[Post] = []
