@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from app import build_prompt, load_posts, rank_posts
+from app import build_prompt, build_prompt_from_posts, load_posts, rank_posts
 
 
 def test_load_posts_reads_text_files_from_exact_folder(tmp_path: Path) -> None:
@@ -38,3 +38,18 @@ def test_build_prompt_includes_topic_examples_and_copy_guard() -> None:
     assert "example style post" in prompt
     assert "Do not copy" in prompt
     assert "Output only the post text" in prompt
+
+
+def test_build_prompt_from_posts_uses_relevant_post_texts(tmp_path: Path) -> None:
+    posts = [
+        (tmp_path / "10.txt", "first relevant style"),
+        (tmp_path / "11.txt", "second relevant style"),
+    ]
+    for path, text in posts:
+        path.write_text(text, encoding="utf-8")
+
+    prompt = build_prompt_from_posts("release notes", load_posts(tmp_path))
+
+    assert "release notes" in prompt
+    assert "first relevant style" in prompt
+    assert "second relevant style" in prompt

@@ -100,7 +100,11 @@ Examples:
 Output only the post text."""
 
 
-def generate_post(topic: str, examples: list[Post]) -> str:
+def build_prompt_from_posts(topic: str, examples: list[Post]) -> str:
+    return build_prompt(topic, [post.text for post in examples])
+
+
+def generate_post(prompt: str) -> str:
     from google import genai
 
     api_key = os.environ.get("GEMINI_API_KEY")
@@ -109,7 +113,6 @@ def generate_post(topic: str, examples: list[Post]) -> str:
 
     model = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
     client = genai.Client(api_key=api_key)
-    prompt = build_prompt(topic, [post.text for post in examples])
     response = client.models.generate_content(model=model, contents=prompt)
     return (response.text or "").strip()
 
@@ -133,17 +136,61 @@ def main() -> None:
     topic = st.text_input("Topic", placeholder="What should the new post be about?")
 
     generated = ""
+    examples: list[Post] = []
+    prompt = ""
     if st.button("Generate", type="primary", disabled=not topic.strip() or not posts):
-        with st.spinner("Generating post..."):
+        with st.status("Generating post...", expanded=True) as status:
             try:
+                status.write("Finding relevant posts")
                 examples = rank_posts(topic, posts)
-                generated = generate_post(topic, examples)
+                for post in examples:
+                    st.markdown(f"**{post.path.name}**")
+                    st.text_area(
+                        f"Retrieved contents of {post.path.name}",
+                        value=post.text,
+                        height=140,
+                        disabled=True,
+                        label_visibility="collapsed",
+                        key=f"status-post-{post.path}",
+                    )
+                prompt = build_prompt_from_posts(topic, examples)
+                status.write("Sending prompt to Gemini")
+                generated = generate_post(prompt)
+                status.write("Displaying post contents")
+                status.write("Showing prompt")
+                status.update(label="Post generated", state="complete")
             except ValueError as exc:
+                status.update(label="Generation failed", state="error")
                 st.error(str(exc))
             except Exception as exc:  # noqa: BLE001
+                status.update(label="Generation failed", state="error")
                 st.error(f"Gemini request failed: {exc}")
 
     st.text_area("Generated post", value=generated, height=320)
+
+    if examples:
+        with st.expander("Relevant posts"):
+            for post in examples:
+                st.markdown(f"**{post.path.name}**")
+                st.text_area(
+                    f"Contents of {post.path.name}",
+                    value=post.text,
+                    height=180,
+                    disabled=True,
+                    label_visibility="collapsed",
+                    key=f"post-{post.path}",
+                )
+
+    if prompt:
+        with st.expander("Prompt"):
+            st.text_area(
+                "Prompt sent to Gemini",
+                value=prompt,
+                height=320,
+                disabled=True,
+                label_visibility="collapsed",
+                key="prompt",
+            )
 
 
 if __name__ == "__main__":
