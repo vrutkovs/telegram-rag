@@ -5,7 +5,7 @@ from app import (
     build_prompt_from_posts,
     load_posts,
     rank_posts,
-    select_random_posts,
+    select_example_posts,
 )
 
 
@@ -66,18 +66,38 @@ def test_build_prompt_from_posts_uses_relevant_post_texts(tmp_path: Path) -> Non
     assert "second relevant style" in prompt
 
 
-def test_select_random_posts_limits_count_and_uses_sampler(tmp_path: Path) -> None:
-    for index in range(4):
-        (tmp_path / f"{index}.txt").write_text(f"post {index}", encoding="utf-8")
+def test_select_example_posts_randomly_samples_from_relevant_candidates(
+    tmp_path: Path,
+) -> None:
+    posts = [
+        ("1.txt", "alpha beta gamma delta"),
+        ("2.txt", "alpha beta gamma"),
+        ("3.txt", "alpha beta"),
+        ("4.txt", "alpha"),
+        ("5.txt", "unrelated note"),
+        ("6.txt", "another unrelated note"),
+    ]
+    for name, text in posts:
+        (tmp_path / name).write_text(text, encoding="utf-8")
 
-    selected = select_random_posts(load_posts(tmp_path), count=2, rng=ReverseSampler())
+    selected = select_example_posts(
+        "alpha beta gamma delta",
+        load_posts(tmp_path),
+        count=2,
+        rng=ReverseSampler(),
+    )
 
-    assert [post.text for post in selected] == ["post 3", "post 2"]
+    assert [post.text for post in selected] == ["alpha", "alpha beta"]
 
 
-def test_select_random_posts_does_not_exceed_available_posts(tmp_path: Path) -> None:
+def test_select_example_posts_does_not_exceed_available_posts(tmp_path: Path) -> None:
     (tmp_path / "1.txt").write_text("only post", encoding="utf-8")
 
-    selected = select_random_posts(load_posts(tmp_path), count=10, rng=ReverseSampler())
+    selected = select_example_posts(
+        "only",
+        load_posts(tmp_path),
+        count=10,
+        rng=ReverseSampler(),
+    )
 
     assert [post.text for post in selected] == ["only post"]

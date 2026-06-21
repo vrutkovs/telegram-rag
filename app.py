@@ -77,10 +77,11 @@ def rank_posts(topic: str, posts: list[Post], limit: int = 8) -> list[Post]:
     return [post for post in sorted(posts, key=score, reverse=True)[:limit]]
 
 
-def select_random_posts(posts: list[Post], count: int, rng=random) -> list[Post]:
+def select_example_posts(topic: str, posts: list[Post], count: int, rng=random) -> list[Post]:
     if count <= 0 or not posts:
         return []
-    return rng.sample(posts, min(count, len(posts)))
+    candidates = rank_posts(topic, posts, limit=count * 2)
+    return rng.sample(candidates, min(count, len(candidates)))
 
 
 def build_prompt(topic: str, examples: list[str]) -> str:
@@ -173,8 +174,8 @@ def main() -> None:
     if st.button("Generate", type="primary", disabled=not topic.strip() or not posts):
         with st.status("Generating post...", expanded=True) as status:
             try:
-                status.write("Fetching random posts")
-                examples = select_random_posts(posts, int(post_count))
+                status.write("Finding relevant posts")
+                examples = select_example_posts(topic, posts, int(post_count))
                 for post in examples:
                     st.markdown(f"**{post.path.name}**")
                     st.text_area(
@@ -204,7 +205,7 @@ def main() -> None:
     st.text_area("Generated post", value=generated, height=320)
 
     if examples:
-        with st.expander("Fetched posts"):
+        with st.expander("Selected examples"):
             for post in examples:
                 st.markdown(f"**{post.path.name}**")
                 st.text_area(
