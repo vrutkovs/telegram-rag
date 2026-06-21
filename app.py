@@ -1,4 +1,5 @@
 import os
+import random
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -75,6 +76,12 @@ def rank_posts(topic: str, posts: list[Post], limit: int = 8) -> list[Post]:
     return [post for post in sorted(posts, key=score, reverse=True)[:limit]]
 
 
+def select_random_posts(posts: list[Post], count: int, rng=random) -> list[Post]:
+    if count <= 0 or not posts:
+        return []
+    return rng.sample(posts, min(count, len(posts)))
+
+
 def build_prompt(topic: str, examples: list[str]) -> str:
     formatted_examples = "\n\n".join(
         f"Example {index}:\n{text}" for index, text in enumerate(examples, start=1)
@@ -104,8 +111,9 @@ def build_prompt_from_posts(topic: str, examples: list[Post]) -> str:
     return build_prompt(topic, [post.text for post in examples])
 
 
-def generate_post(prompt: str) -> str:
+def generate_post(prompt: str, temperature: float) -> str:
     from google import genai
+    from google.genai import types
 
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
@@ -113,7 +121,11 @@ def generate_post(prompt: str) -> str:
 
     model = os.environ.get("GEMINI_MODEL", "gemini-3.1-pro-preview")
     client = genai.Client(api_key=api_key)
-    response = client.models.generate_content(model=model, contents=prompt)
+    response = client.models.generate_content(
+        model=model,
+        contents=prompt,
+        config=types.GenerateContentConfig(temperature=temperature),
+    )
     return (response.text or "").strip()
 
 
@@ -134,6 +146,14 @@ def main() -> None:
 
     st.caption(f"Loaded {len(posts)} posts from {posts_folder}")
     topic = st.text_input("Topic", placeholder="What should the new post be about?")
+    post_count = st.number_input(
+        "Posts to fetch",
+        min_value=1,
+        max_value=max(1, len(posts)),
+        value=min(8, max(1, len(posts))),
+        step=1,
+    )
+    temperature = st.slider("Temperature", min_value=0.0, max_value=1.0, value=0.7, step=0.1)
 
     generated = ""
     examples: list[Post] = []
@@ -141,8 +161,8 @@ def main() -> None:
     if st.button("Generate", type="primary", disabled=not topic.strip() or not posts):
         with st.status("Generating post...", expanded=True) as status:
             try:
-                status.write("Finding relevant posts")
-                examples = rank_posts(topic, posts)
+                status.write("Fetching random posts")
+                examples = select_random_posts(posts, int(post_count))
                 for post in examples:
                     st.markdown(f"**{post.path.name}**")
                     st.text_area(
@@ -155,7 +175,7 @@ def main() -> None:
                     )
                 prompt = build_prompt_from_posts(topic, examples)
                 status.write("Sending prompt to Gemini")
-                generated = generate_post(prompt)
+                generated = generate_post(prompt, temperature)
                 status.write("Displaying post contents")
                 status.write("Showing prompt")
                 status.update(label="Post generated", state="complete")
@@ -169,7 +189,7 @@ def main() -> None:
     st.text_area("Generated post", value=generated, height=320)
 
     if examples:
-        with st.expander("Relevant posts"):
+        with st.expander("Fetched posts"):
             for post in examples:
                 st.markdown(f"**{post.path.name}**")
                 st.text_area(

@@ -1,6 +1,17 @@
 from pathlib import Path
 
-from app import build_prompt, build_prompt_from_posts, load_posts, rank_posts
+from app import (
+    build_prompt,
+    build_prompt_from_posts,
+    load_posts,
+    rank_posts,
+    select_random_posts,
+)
+
+
+class ReverseSampler:
+    def sample(self, posts: list, count: int) -> list:
+        return list(reversed(posts))[:count]
 
 
 def test_load_posts_reads_text_files_from_exact_folder(tmp_path: Path) -> None:
@@ -53,3 +64,20 @@ def test_build_prompt_from_posts_uses_relevant_post_texts(tmp_path: Path) -> Non
     assert "release notes" in prompt
     assert "first relevant style" in prompt
     assert "second relevant style" in prompt
+
+
+def test_select_random_posts_limits_count_and_uses_sampler(tmp_path: Path) -> None:
+    for index in range(4):
+        (tmp_path / f"{index}.txt").write_text(f"post {index}", encoding="utf-8")
+
+    selected = select_random_posts(load_posts(tmp_path), count=2, rng=ReverseSampler())
+
+    assert [post.text for post in selected] == ["post 3", "post 2"]
+
+
+def test_select_random_posts_does_not_exceed_available_posts(tmp_path: Path) -> None:
+    (tmp_path / "1.txt").write_text("only post", encoding="utf-8")
+
+    selected = select_random_posts(load_posts(tmp_path), count=10, rng=ReverseSampler())
+
+    assert [post.text for post in selected] == ["only post"]
