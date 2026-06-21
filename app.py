@@ -35,7 +35,7 @@ STOP_WORDS = {
     "you",
     "your",
 }
-MIN_POST_WORDS = 20
+MIN_POST_WORDS = 10
 
 
 def word_count(text: str) -> int:
@@ -82,7 +82,9 @@ def rank_posts(topic: str, posts: list[Post], limit: int = 8) -> list[Post]:
     return [post for post in sorted(posts, key=score, reverse=True)[:limit]]
 
 
-def select_example_posts(topic: str, posts: list[Post], count: int, rng=random) -> list[Post]:
+def select_example_posts(
+    topic: str, posts: list[Post], count: int, rng=random
+) -> list[Post]:
     if count <= 0 or not posts:
         return []
     candidates = rank_posts(topic, posts, limit=count * 2)
@@ -174,9 +176,9 @@ def main() -> None:
             help="0.0 = safer and more predictable, 1.0 = most creative",
         )
 
-    generated = st.session_state.get("generated_post", "")
-    examples: list[Post] = st.session_state.get("selected_examples", [])
-    prompt = st.session_state.get("generated_prompt", "")
+    generated = ""
+    examples: list[Post] = []
+    prompt = ""
     if st.button("Generate", type="primary", disabled=not topic.strip() or not posts):
         with st.status("Generating post...", expanded=True) as status:
             try:
@@ -195,9 +197,6 @@ def main() -> None:
                 prompt = build_prompt_from_posts(topic, examples)
                 status.write("Sending prompt to Gemini")
                 generated = generate_post(prompt, temperature)
-                st.session_state["generated_post"] = generated
-                st.session_state["selected_examples"] = examples
-                st.session_state["generated_prompt"] = prompt
                 status.write("Displaying post contents")
                 status.write("Showing prompt")
                 status.update(label="Post generated", state="complete")
