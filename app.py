@@ -37,7 +37,7 @@ STOP_WORDS = {
 }
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading posts...")
 def load_posts(folder: Path) -> list[Post]:
     if not folder.exists():
         raise ValueError(f"POSTS_FOLDER does not exist: {folder}")
