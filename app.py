@@ -111,7 +111,7 @@ def generate_post(prompt: str) -> str:
     if not api_key:
         raise ValueError("Set GEMINI_API_KEY")
 
-    model = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+    model = os.environ.get("GEMINI_MODEL", "gemini-3.1-pro-preview")
     client = genai.Client(api_key=api_key)
     response = client.models.generate_content(model=model, contents=prompt)
     return (response.text or "").strip()
