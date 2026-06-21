@@ -1,0 +1,150 @@
+import os
+import re
+from dataclasses import dataclass
+from pathlib import Path
+
+import streamlit as st
+
+
+@dataclass(frozen=True)
+class Post:
+    path: Path
+    text: str
+
+
+STOP_WORDS = {
+    "about",
+    "after",
+    "again",
+    "also",
+    "and",
+    "are",
+    "but",
+    "for",
+    "from",
+    "has",
+    "have",
+    "into",
+    "new",
+    "not",
+    "that",
+    "the",
+    "this",
+    "with",
+    "you",
+    "your",
+}
+
+
+def load_posts(folder: Path) -> list[Post]:
+    if not folder.exists():
+        raise ValueError(f"POSTS_FOLDER does not exist: {folder}")
+    if not folder.is_dir():
+        raise ValueError(f"POSTS_FOLDER must be a directory: {folder}")
+
+    posts = []
+    for path in sorted(folder.glob("*.txt")):
+        text = path.read_text(encoding="utf-8").strip()
+        if text:
+            posts.append(Post(path=path, text=text))
+    return posts
+
+
+def tokenize(text: str) -> set[str]:
+    words = re.findall(r"[\w]+", text.lower())
+    return {word for word in words if len(word) > 2 and word not in STOP_WORDS}
+
+
+def rank_posts(topic: str, posts: list[Post], limit: int = 8) -> list[Post]:
+    if not posts:
+        return []
+
+    topic_words = tokenize(topic)
+    topic_phrase = topic.strip().lower()
+    lengths = sorted(len(post.text) for post in posts)
+    median_length = lengths[len(lengths) // 2]
+
+    def score(post: Post) -> tuple[float, str]:
+        post_words = tokenize(post.text)
+        overlap = len(topic_words & post_words)
+        phrase_bonus = 3 if topic_phrase and topic_phrase in post.text.lower() else 0
+        length_distance = abs(len(post.text) - median_length)
+        representative_bonus = 1 / (1 + length_distance)
+        return overlap + phrase_bonus + representative_bonus, post.path.name
+
+    return [post for post in sorted(posts, key=score, reverse=True)[:limit]]
+
+
+def build_prompt(topic: str, examples: list[str]) -> str:
+    formatted_examples = "\n\n".join(
+        f"Example {index}:\n{text}" for index, text in enumerate(examples, start=1)
+    )
+    return f"""You are writing a new Telegram channel post.
+
+Study examples only for style:
+- language
+- tone
+- structure
+- sentence length
+- paragraph breaks
+- emoji and hashtag habits
+- punctuation and capitalization
+- call-to-action style
+
+Do not copy sentences, facts, claims, or specific wording from examples.
+Write an original post about: {topic}
+
+Examples:
+{formatted_examples}
+
+Output only the post text."""
+
+
+def generate_post(topic: str, examples: list[Post]) -> str:
+    from google import genai
+
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("Set GEMINI_API_KEY")
+
+    model = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+    client = genai.Client(api_key=api_key)
+    prompt = build_prompt(topic, [post.text for post in examples])
+    response = client.models.generate_content(model=model, contents=prompt)
+    return (response.text or "").strip()
+
+
+def main() -> None:
+    st.set_page_config(page_title="Telegram post generator")
+    st.title("Telegram post generator")
+
+    posts_folder = os.environ.get("POSTS_FOLDER")
+    if not posts_folder:
+        st.error("Set POSTS_FOLDER to exact folder with existing .txt posts")
+        st.stop()
+
+    try:
+        posts = load_posts(Path(posts_folder))
+    except ValueError as exc:
+        st.error(str(exc))
+        st.stop()
+
+    st.caption(f"Loaded {len(posts)} posts from {posts_folder}")
+    topic = st.text_input("Topic", placeholder="What should the new post be about?")
+
+    generated = ""
+    if st.button("Generate", type="primary", disabled=not topic.strip() or not posts):
+        with st.spinner("Generating post..."):
+            try:
+                examples = rank_posts(topic, posts)
+                generated = generate_post(topic, examples)
+            except ValueError as exc:
+                st.error(str(exc))
+            except Exception as exc:  # noqa: BLE001
+                st.error(f"Gemini request failed: {exc}")
+
+    st.text_area("Generated post", value=generated, height=320)
+
+
+if __name__ == "__main__":
+    main()

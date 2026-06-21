@@ -5,6 +5,8 @@ description = "Retrieve Telegram channel posts into text files"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "google-genai>=1.53.0",
+    "streamlit>=1.52.0",
     "telethon>=1.40.0",
 ]
 
