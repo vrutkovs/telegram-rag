@@ -107,6 +107,7 @@ Study examples only for style:
 
 Do not copy sentences, facts, claims, or specific wording from examples.
 Write an original post about: {topic}
+Write at least 20 words.
 
 Examples:
 {formatted_examples}

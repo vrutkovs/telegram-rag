@@ -2,7 +2,30 @@ from pathlib import Path
 
 import pytest
 
-from retrieve_channel import safe_path_name, telegram_config, write_post
+from retrieve_channel import should_write_message, word_count, safe_path_name, telegram_config, write_post
+
+
+class Message:
+    def __init__(self, raw_text: str = "", forward: object | None = None) -> None:
+        self.raw_text = raw_text
+        self.forward = forward
+
+
+def text_with_words(count: int) -> str:
+    return " ".join(f"word{index}" for index in range(count))
+
+
+def test_word_count_counts_words() -> None:
+    assert word_count("one two, three!") == 3
+
+
+def test_should_write_message_requires_at_least_ten_words() -> None:
+    assert not should_write_message(Message(text_with_words(9)))
+    assert should_write_message(Message(text_with_words(10)))
+
+
+def test_should_write_message_ignores_reposts() -> None:
+    assert not should_write_message(Message(text_with_words(10), forward=object()))
 
 
 def test_safe_path_name_replaces_unsafe_characters() -> None:

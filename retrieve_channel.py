@@ -12,6 +12,19 @@ def safe_path_name(name: str) -> str:
     return cleaned or "channel"
 
 
+def word_count(text: str) -> int:
+    return len(re.findall(r"[\w]+", text))
+
+
+def should_write_message(message: object) -> bool:
+    text = getattr(message, "raw_text", "")
+    if not text:
+        return False
+    if getattr(message, "forward", None):
+        return False
+    return word_count(text) >= 10
+
+
 def write_post(
     output_dir: Path, account_id: int, channel_name: str, post_id: int, text: str
 ) -> Path:
@@ -47,11 +60,10 @@ async def retrieve_channel(channel: str, output_dir: Path) -> int:
         channel_name = getattr(entity, "title", None) or getattr(entity, "username", None) or channel
 
         async for message in client.iter_messages(entity):
-            text = message.raw_text
-            if not text:
+            if not should_write_message(message):
                 continue
 
-            write_post(output_dir, account.id, channel_name, message.id, text)
+            write_post(output_dir, account.id, channel_name, message.id, message.raw_text)
             count += 1
 
     return count
