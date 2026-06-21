@@ -37,6 +37,7 @@ STOP_WORDS = {
 }
 
 
+@st.cache_data(show_spinner=False)
 def load_posts(folder: Path) -> list[Post]:
     if not folder.exists():
         raise ValueError(f"POSTS_FOLDER does not exist: {folder}")
@@ -157,12 +158,17 @@ def main() -> None:
         )
     with temperature_column:
         temperature = st.slider(
-            "Temperature", min_value=0.0, max_value=1.0, value=0.7, step=0.1
+            "Creativity (temperature)",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.7,
+            step=0.1,
+            help="0.0 = safer and more predictable, 1.0 = most creative",
         )
 
-    generated = ""
-    examples: list[Post] = []
-    prompt = ""
+    generated = st.session_state.get("generated", "")
+    examples: list[Post] = st.session_state.get("examples", [])
+    prompt = st.session_state.get("prompt", "")
     if st.button("Generate", type="primary", disabled=not topic.strip() or not posts):
         with st.status("Generating post...", expanded=True) as status:
             try:
@@ -181,6 +187,9 @@ def main() -> None:
                 prompt = build_prompt_from_posts(topic, examples)
                 status.write("Sending prompt to Gemini")
                 generated = generate_post(prompt, temperature)
+                st.session_state["generated"] = generated
+                st.session_state["examples"] = examples
+                st.session_state["prompt"] = prompt
                 status.write("Displaying post contents")
                 status.write("Showing prompt")
                 status.update(label="Post generated", state="complete")
